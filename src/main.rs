@@ -1,5 +1,4 @@
 
-
 ///TP1 : Analyse de trames réseaux par Agathe Julien et Hevisinda Top
 ///Objectif : Identifier les trames Wifi d'identification et de localisation de drones et extraire les informations pertinentes de ces trames à l'aide d'un programme en Rust.
 /// Partie 1: Arguments de ligne de commande et documentation
@@ -89,10 +88,10 @@ struct Args{
 use pcap::Capture;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cap = Capture::from_file("C:/Users/hevis/Downloads/Ressources pour le TP1-20260320/capture-23-05-08-ttgo.pcapng")?;
+    let mut cap = Capture::from_file("captures/capture-23-05-08-ttgo.pcapng")?;
 
     while let Ok(packet) = cap.next_packet(){
-        println!();
+        println!("Le paquet est : {:?}", packet );
     }
     Ok(())
 }
