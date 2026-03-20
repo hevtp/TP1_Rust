@@ -9,6 +9,13 @@
 
 use clap::{Parser};
 
+
+/// Arguments de ligne de commande du programme.
+/// 
+/// Utiliser `--pcap` pour indiquer le fichier à lire et `--packet-count`
+/// pour limiter le nombre de paquets affichés. 
+/// `--interface`permet de spécifier une interface réseau pour la capture en temps réel, `--cards` affiche la liste des interfaces réseau disponibles, `--filter` permet d'appliquer un fitre de capture, `--output-format` spécifie le format de sortie des résultats (par défaut JSON), et `--output-file` indique le nom du fichier de sortie (par défaut results.json).
+
 #[derive(Parser, Debug)]
 
 struct Args{
@@ -86,12 +93,53 @@ struct Args{
 /// Il s'agit d'écrire un programme en Rust pour analyser ce fichier PCAP et extraire les informations pertinentes de ces trames "beacon" de localisation de drones.
 
 use pcap::Capture;
+use std::path::PathBuf;
+
+const PCAP_BASE_DIRS: [&str; 2] = ["captures", "../captures"];
+
+
+/// Le programme ouvre un fichier PCAP fourni via `--pcap`, lit les paquets un à un avec `next_packet` et affiche au plus `--packet-count` paquets. 
+/// Si `--pcap` est absent ou si le fichier n'existe pas, une erreur est retournée. 
+
+
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cap = Capture::from_file("captures/capture-23-05-08-ttgo.pcapng")?;
 
-    while let Ok(packet) = cap.next_packet(){
-        println!("Le paquet est : {:?}", packet );
+    // Parse les arguments de ligne de commande et vérifie la présence du fichier PCAP.
+    let args = Args::parse();
+    let pcap_filename = match args.pcap {
+        Some(filename) => filename,
+        None => return Err("Merci de fournir --pcap <nom_fichier.pcap|pcapng>".into()),
+    };
+
+    // On cherche le fichier PCAP dans les répertoires spécifiés dans `PCAP_BASE_DIRS`. Si le fichier n'est pas trouvé, une erreur détaillée est retournée.
+    let pcap_path = PCAP_BASE_DIRS
+        .iter()
+        .map(|base| PathBuf::from(base).join(&pcap_filename))
+        .find(|candidate| candidate.exists())
+        .unwrap_or_else(|| PathBuf::from(PCAP_BASE_DIRS[0]).join(&pcap_filename));
+
+    // Vérifie que le fichier PCAP existe avant de tenter de l'ouvrir. Si le fichier est introuvable, une erreur détaillée est retournée avec les chemins testés.
+    if !pcap_path.exists() {
+        let cwd = std::env::current_dir()?;
+        return Err(format!(
+            "Fichier introuvable: {}\nRépertoire courant: {}\nDossiers PCAP testés: {:?}",
+            pcap_path.display(),
+            cwd.display(),
+            PCAP_BASE_DIRS
+        )
+        .into());
+    }
+
+    // Ouvre le fichier PCAP avec la bibliothèque pcap. Si l'ouverture échoue, une erreur détaillée est retournée.
+    let mut cap = Capture::from_file(&pcap_path)?;
+
+    // Lit les paquets un à un avec `next_packet` et affiche au plus `--packet-count` paquets. Si la lecture d'un paquet échoue, la boucle se termine.
+    for packet_index in 1..=args.packet_count {
+        match cap.next_packet() {
+            Ok(packet) => println!("Paquet #{packet_index} : {:?}", packet),
+            Err(_) => break,
+        }
     }
     Ok(())
 }
