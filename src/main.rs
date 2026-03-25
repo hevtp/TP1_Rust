@@ -1,12 +1,11 @@
 
-///TP1 : Analyse de trames réseaux par Agathe Julien et Hevisinda Top
-///Objectif : Identifier les trames Wifi d'identification et de localisation de drones et extraire les informations pertinentes de ces trames à l'aide d'un programme en Rust.
-/// Partie 1: Arguments de ligne de commande et documentation
-/// Cette partie permet de définir et gérer les différents
-/// arguments passés au programme en ligne de commande.
-///La gestion des arguments est réalisée avec la bibliothèque clap
-///On choisit d'utiliser le mode derive car plus lisible et intuitif.
+//! # TP1 : Analyse de trames réseaux par Agathe Julien et Hevisinda Top
+//!
+//! Objectif : Identifier les trames Wifi d'identification et de localisation de drones et extraire les informations pertinentes de ces trames à l'aide d'un programme en Rust.
 
+/// Cette partie permet de définir et gérer les différents  arguments passés au programme en ligne de commande.
+///La gestion des arguments est réalisée avec la bibliothèque clap
+/// On choisit d'utiliser le mode derive car plus lisible et intuitif.
 use clap::{Parser};
 use serde::Serialize;
 
@@ -61,21 +60,20 @@ struct Args{
 /// Parmi les trames capturées, on distingue notamment :
 ///
 /// - **Trames de données QoS (Quality of Service)** : Elles contiennent les **données utilisateurs**.
-/// Exemple : une trame `QoS Data` de l’adresse `Apple_09:fe:be` vers `HuaweiTechno_30:6b:20`.
-
+///   Exemple : une trame `QoS Data` de l’adresse `Apple_09:fe:be` vers `HuaweiTechno_30:6b:20`.
 /// - **Trames Acknowledgement (ACK)** : permet de confirmer la bonne réception de la trame précedente. Elles sont uniquement en unicast.
 ///
 /// - **Trames AWDL (Apple Wireless Direct Link)** : envoyées en broadcast par des appareils Apple pour permettre la communication directe entre eux, par exemple pour le AirDrop.
 ///   Exemple : l’adresse MAC `66:19:11:f0:12:4d` envoie une trame AWDL.
 ///
 /// - **Trames Beacon** : envoyées en broadcast, c'est à dire à toutes les stations à portée. Ces trames annoncent la présence d’un réseau et contiennent des informations comme le **SSID** et l’**intervalle de beacon**.
-///    Exemple : l’adresse MAC `86:2a:fd:a4:df:68` envoie une trame Beacon pour le réseau `"DIRECT-68-HP"`.
+///   Exemple : l’adresse MAC `86:2a:fd:a4:df:68` envoie une trame Beacon pour le réseau `"DIRECT-68-HP"`.
 ///
 /// - **Intervalle de Beacon** : spécifie la durée entre les émissions successives de Beacon.
-///  Il permet de savoir à quelle fréquence un client peut s’attendre à recevoir ces trames de balise.
+///   Il permet de savoir à quelle fréquence un client peut s’attendre à recevoir ces trames de balise.
 ///
 /// - **Application dans le cas des drones**  : Dans le ca sdes drones, ce type de trame est utilisé par les drones pour signaler leur présence et leur position aux autorités. En analysant ces trames, on peut obtenir des informations sur les drones présents dans la zone de capture, telles que leur ID, leur position GPS, leur altitude, etc.
-/// Ces trames sont définies par l'arrêté publié au journal officiel et sont utilisées par les drones pour se conformer à la réglementation en vigueur en matière de sécurité aérienne.
+///   Ces trames sont définies par l'arrêté publié au journal officiel et sont utilisées par les drones pour se conformer à la réglementation en vigueur en matière de sécurité aérienne.
 ///
 /// On peut repérer ces trames de droneID dans le fichier PCAP. En effet, d'après la documentation officielle :
 /// - Les trames utilisent le protocole Wi-Fi conforme à la norme IEEE 802.11 (version 2016).
@@ -88,11 +86,8 @@ struct Args{
 ///
 ///On identifie le DroneID :Tag: ID FR: 000 ENS EATHESEUS202300000000001
 ///Ses coordonnées : Latitude: -5863,96928, Tag: Longitude: 17394,57280
-
-
 /// Partie 3 : Analyse du fichier PCAP avec Rust.
 /// Il s'agit d'écrire un programme en Rust pour analyser ce fichier PCAP et extraire les informations pertinentes de ces trames "beacon" de localisation de drones.
-
 use pcap::Capture;
 use std::fs; 
 use std::path::PathBuf;
@@ -102,12 +97,11 @@ const DRONE_CID: [u8; 3] = [0x6A, 0x5C, 0x35]; //CID spécifique pour les trames
 
 
 /// Le programme ouvre un fichier PCAP fourni via `--pcap`, lit les paquets un à un avec `next_packet` et affiche au plus `--packet-count` paquets. 
-/// Si `--pcap` est absent ou si le fichier n'existe pas, une erreur est retournée. 
-
-
-
+/// Si `--pcap` est absent ou si le fichier n'existe pas, une erreur est retournée.
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut terminal_lines: Vec<String> = Vec::new(); //pour stocker les lignes de sortie et les enregistrer dans un fichier JSON à la fin 
+    let mut terminal_lines: Vec<String> = Vec::new(); //pour conserver les lignes de sortie
+    let mut beacons: Vec<Beacon> = Vec::new(); //Pour stocker les lignes Beacon
+    let mut drones: Vec<Drone> = Vec::new(); //Pour stocker les informations sur les drones
 
     // Parse les arguments de ligne de commande et vérifie la présence du fichier PCAP.
     let args = Args::parse();
@@ -147,10 +141,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-
-
-
-
     // Réouvre le fichier PCAP pour analyser les trames beacons
     let mut cap = Capture::from_file(&pcap_path)?;
     
@@ -158,15 +148,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     log_line(&mut terminal_lines, "=== Analyse des trames Beacon ===");
     log_line(&mut terminal_lines, "");
     let mut beacon_count = 0usize;
-   
+    let packet_count: usize = args.packet_count as usize;
     
     while let Ok(packet) = cap.next_packet() {
+        if beacon_count >= packet_count {
+            break;
+        }
         if let Some((ssid, mac_addr)) = extract_beacon_info(packet.data) {
             beacon_count += 1;
             log_line(
                 &mut terminal_lines,
                 &format!("Beacon #{}: SSID='{}' MAC={}", beacon_count, ssid, mac_addr),
             );
+            //Stock les valeurs dans la structure "Beacons"
+            beacons.push(Beacon{
+                ssid,
+                mac: mac_addr,
+            })
         }
     }
     
@@ -190,12 +188,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut droneid_count = 0usize;
     while let Ok(packet) = cap.next_packet() {
+        if droneid_count >= packet_count {
+            break;
+        }
         if let Some(details) = extract_droneid_info(packet.data) {
             droneid_count += 1;
             log_line(
                 &mut terminal_lines,
                 &format!("DroneID #{}: {}", droneid_count, details),
             );
+
+            //Stock les valeurs dans la structure "Drone"
+            drones.push(Drone{
+                details,
+            })
+
         }
     }
 
@@ -211,47 +218,49 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
-    //enregistre la sortie terminal dans un fichier JSON si le format de sortie est spécifié comme "json". Si un format non supporté est spécifié, un message d'erreur est affiché dans le terminal
-    if args.output_format.eq_ignore_ascii_case("json") {
-        save_terminal_output_json(&args.output_file, &pcap_filename, &terminal_lines)?;
-        println!("Sortie terminal enregistrée dans {}", args.output_file);
-    } else {
-        println!(
-            "Format '{}' non supporté pour l'export terminal. Utilise --output-format json.",
-            args.output_format 
-        );
-    }
+
+    let result = AnalysisResult {
+        pcap_file: pcap_filename.clone(),
+        beacons,
+        drone_ids: drones,
+    };
+
+    save_output(&args.output_format, &args.output_file, &result)?;
+
+    println!(
+        "Résultats sauvegardés dans {} au format {}",
+        args.output_file, args.output_format
+    );
     
     Ok(())
 }
 
-#[derive(Serialize)] //sérialisation en JSON de la structure TerminalOutput pour pouvoir l'enregistrer dans un fichier JSON
-struct TerminalOutput {
-    pcap_file: String, 
-    lines: Vec<String>, 
+
+
+/// Structure pour stocker tout les résultats de l'analyse PCAP.
+#[derive(Serialize)] /// Sérialisable en JSON/CSV.
+struct AnalysisResult {
+    pcap_file: String,
+    beacons: Vec<Beacon>,
+    drone_ids: Vec<Drone>,
 }
+///Structure pour stocker une trame Beacon Wifi
+#[derive(Serialize)]
+struct Beacon {
+    ssid: String,
+    mac: String,
+}
+///Structure pour stocker une trame DroneID
+#[derive(Serialize)]
+struct Drone {
+    details: String,
+}
+
 
 /// Affiche un message dans le terminal et l'ajoute à la liste des lignes pour l'enregistrer dans un fichier JSON à la fin
 fn log_line(lines: &mut Vec<String>, message: &str) {
     println!("{}", message);
     lines.push(message.to_string());
-}
-
-/// Enregistre la sortie dans un fichier JSON avec le nom du fichier PCAP
-fn save_terminal_output_json(
-    output_file: &str,
-    pcap_file: &str, 
-    lines: &[String],
-) -> Result<(), Box<dyn std::error::Error>> { 
-    let payload = TerminalOutput { 
-        pcap_file: pcap_file.to_string(), 
-        lines: lines.to_vec(), 
-    };
-
-    //on sérialise la structure TerminalOutput en JSON avec une mise en forme lisible avec to_string_pretty et on l'écrit dans le fichier de sortie spécifié
-    let json = serde_json::to_string_pretty(&payload)?; 
-    fs::write(output_file, json)?;
-    Ok(())
 }
 
 /// Extrait la taille du header Radiotap (octets 2-3, little-endian)
@@ -266,14 +275,11 @@ fn get_radiotap_length(data: &[u8]) -> usize {
 }
 
 /// Extrait le type et sous-type (premiers 2 octets de l'en-tête 802.11)
-
 /// On a vu sur la capture Wireshark que les trames de type beacon ont un frame control de 0x8000, ce qui correspond à un type de trame 0 (management) et un sous-type de 8 (beacon)
 /// Le champ est lu en little-endian (octet faible puis octet fort), donc les bits utiles correspondent à 0x0080 (type 0, subtype 8) après conversion en entier
-/// Avec 0x0080, les bits de type (bits 2-3) sont 00 (type management) et les bits de sous-type (bits 4-7) sont 1000 (sous-type beacon) 
-
+/// Avec 0x0080, les bits de type (bits 2-3) sont 00 (type management) et les bits de sous-type (bits 4-7) sont 1000 (sous-type beacon)
 /// On voit également sur Wireshark que les bits 0 et 1 sont les bits de version donc on les ignore en décalant de 2 positions vers la droite (>>2) pour extraire le type, et de 4 positions vers la droite (>>4) pour extraire le sous-type
-/// On applique ensuite des masques binaires pour ne conserver que les bits pertinents: &0x3 pour le type (2 bits) et &0xf pour le sous-type (4 bits)
-
+/// On applique ensuite des masques binaires pour ne conserver que les bits pertinents: &0x3 pour le type (2 bits) et &0xf pour le sous-type (4 bits)S
 fn get_frame_type_subtype(fc: u16) -> (u8, u8) {
     // le frame control est un champ de 16 bits dans l'entête 802.11 qui contient des informations sur le type de trame, le sous-type, etc.
     let frame_type = ((fc >> 2) & 0x3) as u8;
@@ -362,12 +368,11 @@ fn extract_beacon_info(data: &[u8]) -> Option<(String, String)> {
 }
 
 /// Extrait les éléments vendor-specific (type 0xdd) et retourne une liste de leurs valeurs
-
 fn extract_vendor_specific_elements(data: &[u8], tlv_offset: usize) -> Vec<Vec<u8>> {
     let mut vendors = Vec::new(); 
     let mut pos = tlv_offset; 
 
-    while pos + 1 < data.len() { 
+    while pos + 1 < data.len() {
         let tag_type = data[pos];
         let tag_len = data[pos + 1] as usize;
 
@@ -525,4 +530,47 @@ fn extract_droneid_info(data: &[u8]) -> Option<String> {
         }
     }
     None 
+}
+
+///Partie 4 : Sauvegarde des résultats
+///L'objectif est de stocker les résultats de l'analyse dans un fichier, en fonction du format de sortie choisi.
+///
+///Fonction permettant de stocker la sortie en JSON ou en CSV
+fn save_output(
+    format: &str,
+    output_file: &str,
+    result: &AnalysisResult,
+) -> Result<(), Box<dyn std::error::Error>> {
+    match format.to_lowercase().as_str() {
+        //JSON
+        "json" => {
+            let json = serde_json::to_string_pretty(result)?; //Sérialise la structure AnalysisResult en JSON avec une mise en forme lisible avec to_string_pretty.
+            fs::write(output_file, json)?;//écrit dans le fichier
+        }
+
+        //CSV
+        "csv" => {
+            let mut wtr = csv::Writer::from_path(output_file)?; //Crée un writer CSV vers le fichier de sortie
+
+            // Ecriture de l'entête pour les Beacons et DroneID
+            wtr.write_record(["type", "ssid", "mac", "details"])?;
+
+            //Parcours de tous les beacons et écriture dans le CVS
+            for b in &result.beacons {
+                wtr.write_record(["beacon", &b.ssid, &b.mac, ""])?;
+            }
+            //Idem les DroneID
+            for d in &result.drone_ids {
+                wtr.write_record(["drone", "", "", &d.details])?;
+            }
+
+            wtr.flush()?; //force l'écriture du buffer dans le fichier
+        }
+
+        _ => {
+            return Err(format!("Format '{}' non supporté", format).into()); //Format non supporté
+        }
+    }
+
+    Ok(())
 }

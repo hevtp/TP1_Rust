@@ -1,0 +1,28 @@
+{
+  "pcap_file": "capture_beacon.pcapng",
+  "beacons": [
+    {
+      "ssid": "THESEUS_DAO_1",
+      "mac": "24:62:ab:dd:b0:bd"
+    },
+    {
+      "ssid": "THESEUS_DAO_1",
+      "mac": "24:62:ab:dd:b0:bd"
+    },
+    {
+      "ssid": "THESEUS_DAO_1",
+      "mac": "24:62:ab:dd:b0:bd"
+    }
+  ],
+  "drone_ids": [
+    {
+      "details": "v=1 ID='000ENSEATHESEUS202300000000001' lat=49.18493 lon=2.41255 alt=133m"
+    },
+    {
+      "details": "v=1 ID='000ENSEATHESEUS202300000000001' lat=49.18493 lon=2.41255 alt=133m"
+    },
+    {
+      "details": "v=1 ID='000ENSEATHESEUS202300000000001' lat=49.18493 lon=2.41255 alt=133m"
+    }
+  ]
+}
