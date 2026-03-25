@@ -1,0 +1,39 @@
+Partie 2 : Analyse du fichier PCAP avec Wireshark
+
+Dans cette seconde partie, nous analysons le fichier de capture PCAP fourni sur Moodle à l'aide de Wireshark.
+La capture a été réalisée en mode "monitor" avec une carte Wi-Fi, ce qui permet de capturer toutes les trames présentes dans l’air,
+y compris les trames de gestion (management frames) et de contrôle. On observe plusieurs types d'appareils présents sur le réseau
+(Apple, Huawei, Xiaomi, etc.), qui communiquent via le protocole Wi-Fi 802.11.
+
+Parmi les trames capturées, on distingue notamment :
+
+- Trames de données QoS (Quality of Service) : Elles contiennent les données utilisateurs.
+  Exemple : une trame `QoS Data` de l’adresse Apple_09:fe:be vers HuaweiTechno_30:6b:20.
+
+- Trames Acknowledgement (ACK) : permet de confirmer la bonne réception de la trame précédente. Elles sont uniquement en unicast.
+
+- Trames AWDL (Apple Wireless Direct Link) : envoyées en broadcast par des appareils Apple pour permettre la communication directe entre eux, par exemple pour AirDrop.
+  Exemple : l’adresse MAC `66:19:11:f0:12:4d` envoie une trame AWDL.
+
+- Trames Beacon : envoyées en broadcast, c'est-à-dire à toutes les stations à portée. Ces trames annoncent la présence d’un réseau et contiennent des informations comme le SSID et l’intervalle de beacon.
+  Exemple : l’adresse MAC `86:2a:fd:a4:df:68` envoie une trame Beacon pour le réseau "DIRECT-68-HP".
+
+- Intervalle de Beacon : spécifie la durée entre les émissions successives de Beacon.
+  Il permet de savoir à quelle fréquence un client peut s’attendre à recevoir ces trames de balise.
+
+- Application dans le cas des drones : Dans le cas des drones, ce type de trame est utilisé par les drones pour signaler leur présence et leur position aux autorités.
+  En analysant ces trames, on peut obtenir des informations sur les drones présents dans la zone de capture, telles que leur ID, leur position GPS, leur altitude, etc.
+  Ces trames sont définies par l'arrêté publié au journal officiel et sont utilisées par les drones pour se conformer à la réglementation en vigueur en matière de sécurité aérienne.
+
+On peut repérer ces trames de DroneID dans le fichier PCAP. En effet, d'après la documentation officielle :
+- Les trames utilisent le protocole Wi-Fi conforme à la norme IEEE 802.11 (version 2016).
+- Ce sont des trames de gestion (type 0) de sous-type 8, correspondant aux Beacon frames.
+- Elles sont transmises sur la bande 2,4 GHz (canaux Wi-Fi France, largeur 20 MHz standard, 5 ou 10 MHz possibles).
+- Le message spécifique au drone se trouve dans le payload vendor-specific de la trame, avec le numéro CID `6A-5C-35`.
+- La charge utile contient un numéro de version (1 octet, valeur 1) et un identifiant unique du drone (DroneID), codé sur 30 octets selon la norme ANSI/CTA/2063.
+
+Par exemple, sur Wireshark, on filtre les trames Broadcast, et on choisit une trame de source Expressif_dd:b0:bd, et on va dans la catégorie Tag: Vendor Specific: Secrétariat général de la défense et de la sécurité nationale.
+
+On identifie le DroneID :
+Tag: ID FR: 000 ENS EATHESEUS202300000000001
+Ses coordonnées : Latitude: -5863,96928, Longitude: 17394,57280
