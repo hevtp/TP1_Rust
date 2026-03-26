@@ -10,7 +10,7 @@
 //! Si `--pcap` est absent ou si le fichier n'existe pas, une erreur est retournée. De même, pour la capture en temps réel.
 //! Si `--interface` est fourni sur Windows, une erreur est retournée car le mode monitor n'est pas supporté.
 //!
-//! On souligne également que la partie 6 n'a réussi à fonctionner que sur un appareil sur linux, et non sur la VM car on pas réussi à détecter la carte Wifi (malgré les changements de paramètre réseau sur VirutalBox).
+//!  **Important** : On souligne également que la partie 6 n'a réussi à fonctionner que sur un appareil sur linux, et non sur la VM car on pas réussi à détecter la carte Wifi (malgré les changements de paramètre réseau sur VirutalBox).
 //! Elle ne fonctionne également pas sur Windows car on n'arrive pas à mettre la carte en mode moniteur.
 //!
 //! La réponse à la partie 2 du TP se trouve dans le dossier analyse_wireshark.
