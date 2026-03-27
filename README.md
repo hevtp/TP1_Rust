@@ -1,7 +1,5 @@
 # TP1 : Analyse de trames réseaux
 
-**Auteurs** : Agathe Julien & Hevisinda Top
-
 ## Objectif
 Identifier les trames Wi-Fi d’identification et de localisation de drones et extraire les informations pertinentes avec un programme en Rust.
 
